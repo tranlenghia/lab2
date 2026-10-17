@@ -12,6 +12,8 @@ import validation.CarValidation;
 import validation.InsuranceValidation;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -404,24 +406,178 @@ public class Main {
     }
 
     // FUNCTION 6: LIST INSURANCE STATEMENTS
-    private void listInsuranceStatements() {
-        System.out.println();
-        System.out.println("--- List of Insurance Statements ---");
+    // FUNCTION 6: LIST INSURANCE STATEMENTS
+private void listInsuranceStatements() {
+    System.out.println();
+    System.out.println("--- List of Insurance Statements ---");
 
-        int year = InputHelper.readIntInRange(
-                "Enter year: ", 1, 9999
-        );
+    // Người dùng chỉ cần nhập năm
+    int year = InputHelper.readIntInRange(
+            "Enter year: ", 1, 9999
+    );
 
-        String sortField = readInsuranceSortField();
-        boolean ascending = readAscendingDirection();
+    // Tự động xác định ngày đầu năm và cuối năm
+    LocalDate fromDate = LocalDate.of(year, 1, 1);
+    LocalDate toDate = LocalDate.of(year, 12, 31);
 
-        List<InsuranceStatement> result
-                = insuranceManager.getInsuranceByYear(
-                        year, sortField, ascending
-                );
+    // Chọn trường sắp xếp
+    String sortField = readInsuranceSortField();
 
-        printInsuranceStatements(result);
+    // Chọn ASC hoặc DESC
+    boolean ascending = readAscendingDirection();
+
+    // Lấy danh sách bảo hiểm
+    List<InsuranceStatement> result = new java.util.ArrayList<>(
+            insuranceManager.getInsurances().values()
+    );
+
+    // Lọc bảo hiểm theo năm đã nhập
+    result.removeIf(statement -> {
+        LocalDate date = statement.getEstablishedDate();
+
+        return date == null
+                || date.isBefore(fromDate)
+                || date.isAfter(toDate);
+    });
+
+    // Sắp xếp dữ liệu
+    java.util.Comparator<InsuranceStatement> comparator;
+
+    switch (sortField) {
+        case "id":
+            comparator = java.util.Comparator.comparing(
+                    InsuranceStatement::getInsuranceId,
+                    String.CASE_INSENSITIVE_ORDER
+            );
+            break;
+
+        case "date":
+            comparator = java.util.Comparator.comparing(
+                    InsuranceStatement::getEstablishedDate
+            );
+            break;
+
+        case "plate":
+            comparator = java.util.Comparator.comparing(
+                    InsuranceStatement::getLicensePlate,
+                    String.CASE_INSENSITIVE_ORDER
+            );
+            break;
+
+        default:
+            comparator = java.util.Comparator.comparingInt(
+                    InsuranceStatement::getInsurancePeriod
+            );
+            break;
     }
+
+    if (!ascending) {
+        comparator = comparator.reversed();
+    }
+
+    result.sort(comparator);
+
+    // In báo cáo với khoảng ngày tự động
+    printInsuranceReport(
+            result,
+            fromDate,
+            toDate,
+            sortField,
+            ascending
+    );
+}
+private void printInsuranceReport(
+        List<InsuranceStatement> statements,
+        LocalDate fromDate,
+        LocalDate toDate,
+        String sortField,
+        boolean ascending) {
+
+    System.out.println();
+    System.out.println("Report : INSURANCE STATEMENTS");
+
+    System.out.println(
+            "From : " + DateUtils.formatDate(fromDate)
+            + " To: " + DateUtils.formatDate(toDate)
+    );
+
+    System.out.println();
+
+    String sortLabel;
+
+    switch (sortField) {
+        case "id":
+            sortLabel = "Insurance ID";
+            break;
+
+        case "date":
+            sortLabel = "Established Date";
+            break;
+
+        case "plate":
+            sortLabel = "License plate";
+            break;
+
+        default:
+            sortLabel = "Insurance period";
+            break;
+    }
+
+    System.out.println("Sorted by: " + sortLabel);
+    System.out.println("Sort type: " + (ascending ? "ASC" : "DESC"));
+    System.out.println();
+
+    String border =
+            "--------------------------------------------------------------"
+          + "---------------------------------------------------------------";
+
+    System.out.println(border);
+
+    System.out.printf(
+            "| %-4s | %-12s | %-17s | %-16s | %-24s | %16s | %14s |%n",
+            "No.",
+            "Insurance Id",
+            "Established Date",
+            "License plate",
+            "Customer",
+            "Insurance period",
+            "Insurance fees"
+    );
+
+    System.out.println(border);
+
+    if (statements.isEmpty()) {
+        System.out.printf(
+                "| %-97s |%n",
+                "No insurance statements found in this date range."
+        );
+        System.out.println(border);
+        return;
+    }
+
+    int number = 1;
+
+    for (InsuranceStatement statement : statements) {
+        System.out.printf(
+                "| %4d | %-12s | %-17s | %-16s | %-24s | %16d | %14s |%n",
+                number++,
+                statement.getInsuranceId(),
+                DateUtils.formatDate(
+                        statement.getEstablishedDate()
+                ),
+                statement.getLicensePlate(),
+                statement.getCustomerName(),
+                statement.getInsurancePeriod(),
+                String.format(
+                        java.util.Locale.US,
+                        "$ %,d",
+                        statement.getInsuranceFees()
+                )
+        );
+    }
+
+    System.out.println(border);
+}
 
     private String readInsuranceSortField() {
         System.out.println();
@@ -496,101 +652,144 @@ public class Main {
         System.out.println(border);
     }
 
-    // FUNCTION 7: REPORT ON UNINSURED CARS
-    private void reportUninsuredCars() {
-        System.out.println();
-        System.out.println("--- Report on Uninsured Cars ---");
+  // FUNCTION 7: REPORT ON UNINSURED CARS
+private void reportUninsuredCars() {
+    System.out.println();
 
-        String sortField = readCarSortField();
-        boolean ascending = readAscendingDirection();
+    // Ask the user how the report should be sorted.
+    String sortField = readCarSortField();
+    boolean ascending = readAscendingDirection();
 
-        List<Car> result = carManager.getUninsuredCars(
-                insuranceManager,
-                sortField,
-                ascending
-        );
+    // Get cars that do not have an insurance statement.
+    List<Car> result = carManager.getUninsuredCars(
+            insuranceManager,
+            sortField,
+            ascending
+    );
 
-        printCars(result);
+    // Print the report.
+    printCars(result, sortField, ascending);
+}
+
+// Choose the field used to sort the report.
+private String readCarSortField() {
+    System.out.println();
+    System.out.println("Sort uninsured cars by:");
+    System.out.println("1. License plate");
+    System.out.println("2. Car owner");
+    System.out.println("3. Registration date");
+    System.out.println("4. Vehicle type");
+
+    int choice = InputHelper.readIntInRange(
+            "Choose sort field: ", 1, 4
+    );
+
+    switch (choice) {
+        case 1:
+            return "plate";
+        case 2:
+            return "owner";
+        case 3:
+            return "date";
+        default:
+            return "type";
+    }
+}
+
+// Choose ASC or DESC.
+private boolean readAscendingDirection() {
+    System.out.println();
+    System.out.println("Sort direction:");
+    System.out.println("1. Ascending (ASC)");
+    System.out.println("2. Descending (DESC)");
+
+    int choice = InputHelper.readIntInRange(
+            "Choose direction: ", 1, 2
+    );
+
+    return choice == 1;
+}
+
+// Print the uninsured-car report.
+private void printCars(
+        List<Car> cars, String sortField, boolean ascending) {
+
+    // Convert the sorting key into a readable label.
+    String sortLabel;
+
+    switch (sortField) {
+        case "plate":
+            sortLabel = "License plate";
+            break;
+        case "owner":
+            sortLabel = "Car owner";
+            break;
+        case "date":
+            sortLabel = "Registration date";
+            break;
+        default:
+            sortLabel = "Vehicle type";
+            break;
     }
 
-    private String readCarSortField() {
-        System.out.println();
-        System.out.println("Sort uninsured cars by:");
-        System.out.println("1. License plate");
-        System.out.println("2. Car owner");
-        System.out.println("3. Registration date");
-        System.out.println("4. Vehicle type");
+    // Report heading.
+    System.out.println();
+    System.out.println("Report: UNINSURED CARS");
+    System.out.println();
+    System.out.println("Sorted by : " + sortLabel);
+    System.out.println("Sort type : " + (ascending ? "ASC" : "DESC"));
+    System.out.println();
 
-        int choice = InputHelper.readIntInRange(
-                "Choose sort field: ", 1, 4
-        );
-
-        switch (choice) {
-            case 1:
-                return "plate";
-            case 2:
-                return "owner";
-            case 3:
-                return "date";
-            default:
-                return "type";
-        }
+    // Handle the case where no uninsured cars exist.
+    if (cars.isEmpty()) {
+        System.out.println("No uninsured cars found.");
+        return;
     }
 
-    private boolean readAscendingDirection() {
-        System.out.println();
-        System.out.println("Sort direction:");
-        System.out.println("1. Ascending (ASC)");
-        System.out.println("2. Descending (DESC)");
+    // Table border.
+    String border =
+            "+-----+-----------------+--------------------+"
+          + "-------------------------------------+"
+          + "----------------------+--------------+-----------------+";
 
-        int choice = InputHelper.readIntInRange(
-                "Choose direction: ", 1, 2
-        );
+    System.out.println(border);
 
-        return choice == 1;
-    }
+    // Table headings.
+    System.out.printf(
+            "| %3s | %-15s | %-18s | %-35s | %-20s | %12s | %15s |%n",
+            "No.",
+            "License plate",
+            "Registration Date",
+            "Vehicle Owner",
+            "Brand",
+            "Vehicle type",
+            "Value"
+    );
 
-    private void printCars(List<Car> cars) {
-        if (cars.isEmpty()) {
-            System.out.println("No uninsured cars found.");
-            return;
-        }
+    System.out.println(border);
 
-        String border
-                = "----------------------------------------------------------------------"
-                + "-----------------------------------------------------------------";
+    // Print each car with its row number.
+    int number = 1;
 
-        System.out.println();
-        System.out.println(border);
-
+    for (Car car : cars) {
         System.out.printf(
-                "| %-15s | %-25s | %-20s | %15s | %-12s | %-20s | %6s |%n",
-                "License Plate",
-                "Car Owner",
-                "Car Brand",
-                "Value",
-                "Reg. Date",
-                "Reg. Place",
-                "Type"
+                "| %3d | %-15s | %-18s | %-35s | %-20s | %12d | %15s |%n",
+                number++,
+                car.getLicensePlate(),
+                DateUtils.formatDate(car.getRegistrationDate()),
+                car.getCarOwner(),
+                car.getCarBrand(),
+                car.getVehicleType(),
+                String.format(
+                        java.util.Locale.US,
+                        "$ %,d",
+                        car.getVehicleValue()
+                )
         );
-
-        System.out.println(border);
-
-        for (Car car : cars) {
-            System.out.printf(
-                    "| %-15s | %-25s | %-20s | %,15d | %-12s | %-20s | %6d |%n",
-                    car.getLicensePlate(),
-                    car.getCarOwner(),
-                    car.getCarBrand(),
-                    car.getVehicleValue(),
-                    DateUtils.formatDate(car.getRegistrationDate()),
-                    car.getRegistrationPlace(),
-                    car.getVehicleType()
-            );
-        }
-
-        System.out.println(border);
     }
+
+    System.out.println(border);
+}
 
     // FUNCTION 8: SAVE DATA
     private boolean saveData() {
