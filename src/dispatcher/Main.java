@@ -1,3 +1,5 @@
+package dispatcher;
+
 import business.CarManager;
 import business.InsuranceManager;
 import fileio.BinaryStorage;
@@ -19,14 +21,13 @@ public class Main {
     private static final String INSURANCE_FILE = "insurances.dat";
 
     private final CarManager carManager = new CarManager();
-    private final InsuranceManager insuranceManager =
-            new InsuranceManager();
+    private final InsuranceManager insuranceManager
+            = new InsuranceManager();
 
-    private final Storage<Map<String, Car>> carStorage =
-            new BinaryStorage<>();
+    private final Storage<Map<String, Car>> carStorage
+            = new BinaryStorage<>();
 
-    private final Storage<Map<String, InsuranceStatement>>
-            insuranceStorage = new BinaryStorage<>();
+    private final Storage<Map<String, InsuranceStatement>> insuranceStorage = new BinaryStorage<>();
 
     private boolean dataChanged = false;
 
@@ -111,7 +112,6 @@ public class Main {
     }
 
     // FUNCTION 1: ADD CAR INFORMATION
-
     private void addCars() {
         while (true) {
             System.out.println();
@@ -183,54 +183,52 @@ public class Main {
     }
 
     // FUNCTION 2: FIND A CAR
+    private void findCar() {
+        System.out.println();
+        System.out.println("--- Find a Car ---");
 
-   private void findCar() {
-    System.out.println();
-    System.out.println("--- Find a Car ---");
+        String plate = InputHelper.readRequiredString(
+                "Enter license plate: "
+        );
 
-    String plate = InputHelper.readRequiredString(
-            "Enter license plate: "
-    );
+        Car car = carManager.findCar(plate);
 
-    Car car = carManager.findCar(plate);
+        if (car == null) {
+            System.out.println("Unregistered vehicle");
+            return;
+        }
 
-    if (car == null) {
-        System.out.println("Unregistered vehicle");
-        return;
+        System.out.println();
+        System.out.println("----------------------------------------------------------------");
+        System.out.printf("| %-22s | %-35s |%n", "Field", "Information");
+        System.out.println("----------------------------------------------------------------");
+
+        System.out.printf("| %-22s | %-35s |%n",
+                "License plate", car.getLicensePlate());
+
+        System.out.printf("| %-22s | %-35s |%n",
+                "Car owner", car.getCarOwner());
+
+        System.out.printf("| %-22s | %-35s |%n",
+                "Car brand", car.getCarBrand());
+
+        System.out.printf("| %-22s | %-35s |%n",
+                "Vehicle value", car.getVehicleValue());
+
+        System.out.printf("| %-22s | %-35s |%n",
+                "Registration date",
+                DateUtils.formatDate(car.getRegistrationDate()));
+
+        System.out.printf("| %-22s | %-35s |%n",
+                "Registration place", car.getRegistrationPlace());
+
+        System.out.printf("| %-22s | %-35s |%n",
+                "Vehicle type", car.getVehicleType());
+
+        System.out.println("----------------------------------------------------------------");
     }
 
-    System.out.println();
-    System.out.println("----------------------------------------------------------------");
-    System.out.printf("| %-22s | %-35s |%n", "Field", "Information");
-    System.out.println("----------------------------------------------------------------");
-
-    System.out.printf("| %-22s | %-35s |%n",
-            "License plate", car.getLicensePlate());
-
-    System.out.printf("| %-22s | %-35s |%n",
-            "Car owner", car.getCarOwner());
-
-    System.out.printf("| %-22s | %-35s |%n",
-            "Car brand", car.getCarBrand());
-
-    System.out.printf("| %-22s | %-35s |%n",
-            "Vehicle value", car.getVehicleValue());
-
-    System.out.printf("| %-22s | %-35s |%n",
-            "Registration date",
-            DateUtils.formatDate(car.getRegistrationDate()));
-
-    System.out.printf("| %-22s | %-35s |%n",
-            "Registration place", car.getRegistrationPlace());
-
-    System.out.printf("| %-22s | %-35s |%n",
-            "Vehicle type", car.getVehicleType());
-
-    System.out.println("----------------------------------------------------------------");
-}
-
     // FUNCTION 3: UPDATE A CAR
-
     private void updateCar() {
         System.out.println();
         System.out.println("--- Update a Car ---");
@@ -249,27 +247,36 @@ public class Main {
         System.out.println("Enter the new car information.");
         System.out.println("The license plate cannot be changed.");
 
-        Car updatedCar = readCarDetails(
-                existingCar.getLicensePlate()
-        );
+        while (true) {
+            // Đọc thông tin mới; giữ nguyên biển số cũ.
+            Car updatedCar = readCarDetails(
+                    existingCar.getLicensePlate()
+            );
 
-        String error = CarValidation.getValidationError(updatedCar);
+            // Kiểm tra lại toàn bộ dữ liệu trước khi cập nhật.
+            String error = CarValidation.getValidationError(updatedCar);
 
-        if (error != null) {
-            System.out.println("Cannot update car: " + error);
+            if (error != null) {
+                System.out.println("Cannot update car: " + error);
+                System.out.println("Please enter the car information again.");
+                continue;
+            }
+
+            // Chỉ thay đổi dữ liệu nếu CarManager chấp nhận.
+            if (carManager.updateCar(plate, updatedCar)) {
+                dataChanged = true;
+                System.out.println("Car updated successfully.");
+            } else {
+                System.out.println(
+                        "Cannot update car. Please check the information."
+                );
+            }
+
             return;
-        }
-
-        if (carManager.updateCar(plate, updatedCar)) {
-            dataChanged = true;
-            System.out.println("Car updated successfully.");
-        } else {
-            System.out.println("Cannot update car.");
         }
     }
 
     // FUNCTION 4: DELETE A CAR
-
     private void deleteCar() {
         System.out.println();
         System.out.println("--- Delete a Car ---");
@@ -315,7 +322,6 @@ public class Main {
     }
 
     // FUNCTION 5: ADD AN INSURANCE STATEMENT
-
     private void addInsurances() {
         while (true) {
             System.out.println();
@@ -341,8 +347,8 @@ public class Main {
                     "Insurance period (12, 24, or 36 months): "
             );
 
-            InsuranceStatement statement =
-                    new InsuranceStatement(
+            InsuranceStatement statement
+                    = new InsuranceStatement(
                             id,
                             date,
                             plate,
@@ -355,8 +361,8 @@ public class Main {
                 System.out.println("Insurance ID already exists.");
 
             } else {
-                String error =
-                        InsuranceValidation.getInputValidationError(
+                String error
+                        = InsuranceValidation.getInputValidationError(
                                 statement
                         );
 
@@ -372,13 +378,13 @@ public class Main {
                         statement, carManager)) {
 
                     dataChanged = true;
-                   System.out.println(
-        "Insurance statement added successfully."
-);
+                    System.out.println(
+                            "Insurance statement added successfully."
+                    );
 
-printInsuranceStatements(
-        java.util.Collections.singletonList(statement)
-);
+                    printInsuranceStatements(
+                            java.util.Collections.singletonList(statement)
+                    );
 
                 } else {
                     System.out.println(
@@ -398,7 +404,6 @@ printInsuranceStatements(
     }
 
     // FUNCTION 6: LIST INSURANCE STATEMENTS
-
     private void listInsuranceStatements() {
         System.out.println();
         System.out.println("--- List of Insurance Statements ---");
@@ -410,8 +415,8 @@ printInsuranceStatements(
         String sortField = readInsuranceSortField();
         boolean ascending = readAscendingDirection();
 
-        List<InsuranceStatement> result =
-                insuranceManager.getInsuranceByYear(
+        List<InsuranceStatement> result
+                = insuranceManager.getInsuranceByYear(
                         year, sortField, ascending
                 );
 
@@ -443,53 +448,55 @@ printInsuranceStatements(
     }
 
     private void printInsuranceStatements(
-        List<InsuranceStatement> statements) {
+            List<InsuranceStatement> statements) {
 
-    if (statements.isEmpty()) {
-        System.out.println(
-                "No insurance statements found for this year."
-        );
-        return;
-    }
+        if (statements.isEmpty()) {
+            System.out.println(
+                    "No insurance statements found for this year."
+            );
+            return;
+        }
 
-    String border =
-            "-----------------------------------------------------------------------------------------------------------------------";
+        String border
+                = "-----------------------------------------------------------------------------------------------------------------------";
 
-    System.out.println();
-    System.out.println(border);
+        System.out.println();
+        System.out.println(border);
 
-    System.out.printf(
-            "| %-13s | %-12s | %-15s | %-25s | %8s | %15s |%n",
-            "Insurance ID",
-            "Date",
-            "License Plate",
-            "Customer Name",
-            "Period",
-            "Fees"
-    );
-
-    System.out.println(border);
-
-    for (InsuranceStatement statement : statements) {
         System.out.printf(
-                "| %-13s | %-12s | %-15s | %-25s | %8d | %15d |%n",
-                statement.getInsuranceId(),
-                DateUtils.formatDate(
-                        statement.getEstablishedDate()
-                ),
-                statement.getLicensePlate(),
-                statement.getCustomerName(),
-                statement.getInsurancePeriod(),
-                statement.getInsuranceFees()
+                "| %-13s | %-12s | %-15s | %-25s | %8s | %15s |%n",
+                "Insurance ID",
+                "Date",
+                "License Plate",
+                "Customer Name",
+                "Period",
+                "Fees"
         );
-    }
 
-    System.out.println(border);
-}
-    
+        System.out.println(border);
+
+        for (InsuranceStatement statement : statements) {
+            System.out.printf(
+                    "| %-13s | %-12s | %-15s | %-25s | %8d | %15s |%n",
+                    statement.getInsuranceId(),
+                    DateUtils.formatDate(
+                            statement.getEstablishedDate()
+                    ),
+                    statement.getLicensePlate(),
+                    statement.getCustomerName(),
+                    statement.getInsurancePeriod(),
+                    String.format(
+                            java.util.Locale.US,
+                            "$ %,d",
+                            statement.getInsuranceFees()
+                    )
+            );
+        }
+
+        System.out.println(border);
+    }
 
     // FUNCTION 7: REPORT ON UNINSURED CARS
-
     private void reportUninsuredCars() {
         System.out.println();
         System.out.println("--- Report on Uninsured Cars ---");
@@ -544,49 +551,48 @@ printInsuranceStatements(
     }
 
     private void printCars(List<Car> cars) {
-    if (cars.isEmpty()) {
-        System.out.println("No uninsured cars found.");
-        return;
-    }
+        if (cars.isEmpty()) {
+            System.out.println("No uninsured cars found.");
+            return;
+        }
 
-    String border =
-            "----------------------------------------------------------------------"
-          + "-----------------------------------------------------------------";
+        String border
+                = "----------------------------------------------------------------------"
+                + "-----------------------------------------------------------------";
 
-    System.out.println();
-    System.out.println(border);
+        System.out.println();
+        System.out.println(border);
 
-    System.out.printf(
-            "| %-15s | %-25s | %-20s | %15s | %-12s | %-20s | %6s |%n",
-            "License Plate",
-            "Car Owner",
-            "Car Brand",
-            "Value",
-            "Reg. Date",
-            "Reg. Place",
-            "Type"
-    );
-
-    System.out.println(border);
-
-    for (Car car : cars) {
         System.out.printf(
-                "| %-15s | %-25s | %-20s | %,15d | %-12s | %-20s | %6d |%n",
-                car.getLicensePlate(),
-                car.getCarOwner(),
-                car.getCarBrand(),
-                car.getVehicleValue(),
-                DateUtils.formatDate(car.getRegistrationDate()),
-                car.getRegistrationPlace(),
-                car.getVehicleType()
+                "| %-15s | %-25s | %-20s | %15s | %-12s | %-20s | %6s |%n",
+                "License Plate",
+                "Car Owner",
+                "Car Brand",
+                "Value",
+                "Reg. Date",
+                "Reg. Place",
+                "Type"
         );
-    }
 
-    System.out.println(border);
-}
+        System.out.println(border);
+
+        for (Car car : cars) {
+            System.out.printf(
+                    "| %-15s | %-25s | %-20s | %,15d | %-12s | %-20s | %6d |%n",
+                    car.getLicensePlate(),
+                    car.getCarOwner(),
+                    car.getCarBrand(),
+                    car.getVehicleValue(),
+                    DateUtils.formatDate(car.getRegistrationDate()),
+                    car.getRegistrationPlace(),
+                    car.getVehicleType()
+            );
+        }
+
+        System.out.println(border);
+    }
 
     // FUNCTION 8: SAVE DATA
-
     private boolean saveData() {
         System.out.println();
         System.out.println("--- Save Data ---");
@@ -616,7 +622,6 @@ printInsuranceStatements(
     }
 
     // FUNCTION 9: LOAD DATA
-
     private void loadData() {
         System.out.println();
         System.out.println("--- Load Data ---");
@@ -633,11 +638,11 @@ printInsuranceStatements(
         }
 
         try {
-            Map<String, Car> loadedCars =
-                    carStorage.load(CAR_FILE);
+            Map<String, Car> loadedCars
+                    = carStorage.load(CAR_FILE);
 
-            Map<String, InsuranceStatement> loadedInsurances =
-                    insuranceStorage.load(INSURANCE_FILE);
+            Map<String, InsuranceStatement> loadedInsurances
+                    = insuranceStorage.load(INSURANCE_FILE);
 
             if (loadedCars == null || loadedInsurances == null) {
                 System.out.println(
@@ -669,7 +674,6 @@ printInsuranceStatements(
     }
 
     // FUNCTION 10: QUIT
-
     private boolean handleQuit() {
         System.out.println();
 
